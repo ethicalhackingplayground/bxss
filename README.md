@@ -12,6 +12,7 @@
 
 - Inject Blind XSS payloads into custom headers
 - Inject Blind XSS payloads into parameters
+- Uses Different Request Methods (PUT,POST,GET,OPTIONS) all at once
 - Tool Chaining
 - Really fast
 - Easy to setup
