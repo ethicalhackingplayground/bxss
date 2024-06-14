@@ -20,8 +20,9 @@
 
 ### Install
 
-
-**`$ go get -u github.com/ethicalhackingplayground/bxss`**
+```shell
+go install github.com/ethicalhackingplayground/bxss@latest
+```
 
 ### Arguments
 ```
