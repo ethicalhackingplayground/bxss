@@ -48,6 +48,9 @@
         Test the parameters for blind xss
   -payload string
         the blind XSS payload
+-payloadFile string
+    	Path to file containing payloads to test
+
         
 ```
 
