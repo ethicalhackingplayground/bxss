@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"golang.org/x/time/rate"
+	"context"
 )
 
 const (
@@ -24,7 +26,11 @@ const (
 	DebugColor   = "\033[0;36m%s%s\033[0m"
 )
 
-var debug bool
+var (
+	debug bool
+	showTimestamp bool
+	limiter *rate.Limiter
+)
 
 func main() {
 	// Flag variables
@@ -35,6 +41,8 @@ func main() {
 	var hf string
 	var a bool
 	var t bool
+	var rl float64
+	var r bool
 
 	// The flag / arguments
 	flag.IntVar(&c, "concurrency", 30, "Set the concurrency")
@@ -45,6 +53,9 @@ func main() {
 	flag.BoolVar(&a, "appendMode", false, "Append the payload to the parameter")
 	flag.BoolVar(&t, "parameters", false, "Test the parameters for blind xss")
 	flag.BoolVar(&debug, "debug", false, "Enable debug mode to view full request details")
+	flag.Float64Var(&rl, "rl", 0, "Rate limit in requests per second (optional)")
+	flag.BoolVar(&r, "r", false, "Follow redirects (optional)")
+	flag.BoolVar(&showTimestamp, "ts", false, "Show timestamp for each request (optional)")
 
 	// Parse the arguments
 	flag.Parse()
@@ -65,6 +76,10 @@ func main() {
 	if (h == "" && hf == "") || (p == "" && pf == "") {
 		flag.PrintDefaults()
 		return
+	}
+
+	if rl > 0 {
+		limiter = rate.NewLimiter(rate.Limit(rl), 1)
 	}
 
 	var headers []string
@@ -98,7 +113,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			processPayloadsAndHeaders(payloads, headers, a, t)
+			processPayloadsAndHeaders(payloads, headers, a, t, r)
 		}()
 	}
 	wg.Wait()
@@ -124,9 +139,17 @@ func readLinesFromFile(filename string) ([]string, error) {
 	return lines, nil
 }
 
-func processPayloadsAndHeaders(payloads, headers []string, appendMode, isParameters bool) {
+func processPayloadsAndHeaders(payloads, headers []string, appendMode, isParameters, followRedirects bool) {
 	scanner := bufio.NewScanner(os.Stdin)
-	client := &http.Client{Timeout: 3 * time.Second}
+	client := &http.Client{
+		Timeout: 3 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if !followRedirects {
+				return http.ErrUseLastResponse
+			}
+			return nil
+		},
+	}
 
 	for scanner.Scan() {
 		link := scanner.Text()
@@ -139,6 +162,9 @@ func processPayloadsAndHeaders(payloads, headers []string, appendMode, isParamet
 }
 
 func testbxss(client *http.Client, payload, link, header string, appendMode, isParameters bool) {
+	if limiter != nil {
+		limiter.Wait(context.Background())
+	}
 	time.Sleep(500 * time.Microsecond)
 	fmt.Println("")
 	fmt.Printf(NoticeColor, "[+] \tHeader:  ", header)
@@ -198,6 +224,10 @@ func makeRequest(client *http.Client, method, payload, link, header string, appe
 	} else {
 		// If no value is provided, use the payload as the value
 		request.Header.Set(header, payload)
+	}
+
+	if showTimestamp {
+		fmt.Printf(InfoColor, "\n[*] Timestamp: ", time.Now().Format(time.RFC3339))
 	}
 
 	if debug {
