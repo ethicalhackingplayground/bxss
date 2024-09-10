@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -13,7 +14,6 @@ import (
 	"sync"
 	"time"
 	"golang.org/x/time/rate"
-	"context"
 )
 
 const (
@@ -141,6 +141,7 @@ func readLinesFromFile(filename string) ([]string, error) {
 
 func processPayloadsAndHeaders(payloads, headers []string, appendMode, isParameters, followRedirects bool) {
 	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Buffer(make([]byte, 1024*1024), 1024*1024) // Increase buffer size
 	client := &http.Client{
 		Timeout: 3 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -152,13 +153,29 @@ func processPayloadsAndHeaders(payloads, headers []string, appendMode, isParamet
 	}
 
 	for scanner.Scan() {
-		link := scanner.Text()
+		link := strings.TrimSpace(scanner.Text())
+		if link == "" {
+			continue // Skip empty lines
+		}
+		link = ensureProtocol(link)
 		for _, payload := range payloads {
 			for _, header := range headers {
 				testbxss(client, payload, link, header, appendMode, isParameters)
 			}
 		}
 	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Printf(ErrorColor, "Error reading input: ", err.Error())
+	}
+}
+
+func ensureProtocol(link string) string {
+	link = strings.TrimSpace(link)
+	if !strings.HasPrefix(link, "http://") && !strings.HasPrefix(link, "https://") {
+		return "https://" + link
+	}
+	return link
 }
 
 func testbxss(client *http.Client, payload, link, header string, appendMode, isParameters bool) {
@@ -180,13 +197,16 @@ func testbxss(client *http.Client, payload, link, header string, appendMode, isP
 func makeRequest(client *http.Client, method, payload, link, header string, appendMode, isParameters bool) {
 	fmt.Printf(NoticeColor, "\n[*] Making request with ", method)
 	fmt.Println("")
+	
+	u, err := url.Parse(link)
+	if err != nil {
+		fmt.Printf(ErrorColor, "Error parsing URL: ", err.Error())
+		return
+	}
+
 	if isParameters {
-		u, err := url.Parse(link)
-		if err != nil {
-			return
-		}
-		qs := url.Values{}
-		for param, vv := range u.Query() {
+		qs := u.Query()
+		for param, vv := range qs {
 			if appendMode {
 				fmt.Printf(TextColor, "[*] Parameter:  ", param)
 				qs.Set(param, vv[0]+payload)
@@ -196,11 +216,12 @@ func makeRequest(client *http.Client, method, payload, link, header string, appe
 			}
 		}
 		u.RawQuery = qs.Encode()
-		link = u.String()
 	}
-	fmt.Printf(InfoColor, "[-] Testing:  ", link)
-	request, err := http.NewRequest(method, link, nil)
+
+	fmt.Printf(InfoColor, "[-] Testing:  ", u.String())
+	request, err := http.NewRequest(method, u.String(), nil)
 	if err != nil {
+		fmt.Printf(ErrorColor, "Error creating request: ", err.Error())
 		return
 	}
 
