@@ -1,27 +1,12 @@
-Usage of ./bxss:
-  -appendMode
-    	Append the payload to the parameter
-  -concurrency int
-    	Set the concurrency (default 30)
-  -header string
-    	Set a single custom header
-  -headerFile string
-    	Path to file containing headers to test
-  -parameters
-    	Test the parameters for blind xss
-  -payload string
-    	The blind XSS payload
-  -payloadFile string
-    	Path to file containing payloads to test
-                                                                                                                                                                         
-root  bxss   ( master)  ♥ 12:42  cat bxss.go                                                                                                  default@us-west-2
 package main
 
 import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"strings"
@@ -38,6 +23,8 @@ const (
 	ErrorColor   = "\033[1;31m%s%s\033[0m"
 	DebugColor   = "\033[0;36m%s%s\033[0m"
 )
+
+var debug bool
 
 func main() {
 	// Flag variables
@@ -57,6 +44,7 @@ func main() {
 	flag.StringVar(&pf, "payloadFile", "", "Path to file containing payloads to test")
 	flag.BoolVar(&a, "appendMode", false, "Append the payload to the parameter")
 	flag.BoolVar(&t, "parameters", false, "Test the parameters for blind xss")
+	flag.BoolVar(&debug, "debug", false, "Enable debug mode to view full request details")
 
 	// Parse the arguments
 	flag.Parse()
@@ -73,8 +61,8 @@ func main() {
                     
 	`, "-- Coded by @z0idsec -- \n")
 
-	// Check if either payload or payloadFile is provided, and either header or headerFile is provided
-	if (p == "" && pf == "") || (h == "" && hf == "") {
+	// Check if at least one header and one payload option is provided
+	if (h == "" && hf == "") || (p == "" && pf == "") {
 		flag.PrintDefaults()
 		return
 	}
@@ -87,7 +75,7 @@ func main() {
 			fmt.Printf(ErrorColor, "Error reading header file: ", err.Error())
 			return
 		}
-	} else {
+	} else if h != "" {
 		headers = []string{h}
 	}
 
@@ -99,7 +87,7 @@ func main() {
 			fmt.Printf(ErrorColor, "Error reading payload file: ", err.Error())
 			return
 		}
-	} else {
+	} else if p != "" {
 		payloads = []string{p}
 	}
 
@@ -136,7 +124,7 @@ func readLinesFromFile(filename string) ([]string, error) {
 	return lines, nil
 }
 
-func processPayloadsAndHeaders(payloads []string, headers []string, appendMode bool, isParameters bool) {
+func processPayloadsAndHeaders(payloads, headers []string, appendMode, isParameters bool) {
 	scanner := bufio.NewScanner(os.Stdin)
 	client := &http.Client{Timeout: 3 * time.Second}
 
@@ -150,24 +138,20 @@ func processPayloadsAndHeaders(payloads []string, headers []string, appendMode b
 	}
 }
 
-func testbxss(client *http.Client, payload string, link string, header string, appendMode bool, isParameters bool) {
+func testbxss(client *http.Client, payload, link, header string, appendMode, isParameters bool) {
 	time.Sleep(500 * time.Microsecond)
 	fmt.Println("")
 	fmt.Printf(NoticeColor, "[+] \tHeader:  ", header)
 	fmt.Printf(TextColor, "[+] \tPayload: ", payload)
 	fmt.Println("")
 
-	// Make GET Request
-	makeRequest(client, "GET", payload, link, header, appendMode, isParameters)
-	// Make POST Request
-	makeRequest(client, "POST", payload, link, header, appendMode, isParameters)
-	// Make OPTIONS Request
-	makeRequest(client, "OPTIONS", payload, link, header, appendMode, isParameters)
-	// Make PUT Request
-	makeRequest(client, "PUT", payload, link, header, appendMode, isParameters)
+	methods := []string{"GET", "POST", "OPTIONS", "PUT"}
+	for _, method := range methods {
+		makeRequest(client, method, payload, link, header, appendMode, isParameters)
+	}
 }
 
-func makeRequest(client *http.Client, method string, payload string, link string, header string, appendMode bool, isParameters bool) {
+func makeRequest(client *http.Client, method, payload, link, header string, appendMode, isParameters bool) {
 	fmt.Printf(NoticeColor, "\n[*] Making request with ", method)
 	fmt.Println("")
 	if isParameters {
@@ -193,9 +177,66 @@ func makeRequest(client *http.Client, method string, payload string, link string
 	if err != nil {
 		return
 	}
+
+	// Remove existing headers that we're testing
+	request.Header.Del("User-Agent")
+	request.Header.Del("X-Forwarded-Host")
+	request.Header.Del("X-Forwarded-For")
+
+	// Set the header with the payload
 	headerParts := strings.SplitN(header, ":", 2)
 	if len(headerParts) == 2 {
-		request.Header.Set(strings.TrimSpace(headerParts[0]), strings.TrimSpace(headerParts[1]))
+		headerName := strings.TrimSpace(headerParts[0])
+		headerValue := strings.TrimSpace(headerParts[1])
+		
+		// Special handling for User-Agent header
+		if strings.ToLower(headerName) == "user-agent" {
+			request.Header.Set("User-Agent", headerValue+payload)
+		} else {
+			request.Header.Set(headerName, headerValue+payload)
+		}
+	} else {
+		// If no value is provided, use the payload as the value
+		request.Header.Set(header, payload)
 	}
-	client.Do(request)
+
+	if debug {
+		debugRequest(request)
+	}
+
+	response, err := client.Do(request)
+	if err != nil {
+		fmt.Printf(ErrorColor, "Error making request: ", err.Error())
+		return
+	}
+	defer response.Body.Close()
+
+	if debug {
+		debugResponse(response)
+	}
+}
+
+func debugRequest(req *http.Request) {
+	dump, err := httputil.DumpRequestOut(req, true)
+	if err != nil {
+		fmt.Printf(ErrorColor, "Error dumping request: ", err.Error())
+	} else {
+		fmt.Printf(DebugColor, "\n--- Request ---\n", string(dump))
+	}
+}
+
+func debugResponse(resp *http.Response) {
+	dump, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		fmt.Printf(ErrorColor, "Error dumping response: ", err.Error())
+	} else {
+		fmt.Printf(DebugColor, "\n--- Response ---\n", string(dump))
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf(ErrorColor, "Error reading response body: ", err.Error())
+	} else {
+		fmt.Printf(DebugColor, "\n--- Response Body ---\n", string(body))
+	}
 }
