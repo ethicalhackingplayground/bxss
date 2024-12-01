@@ -6,7 +6,7 @@
 Bxss - Blind XSS Scanner
 
 [![Version](https://img.shields.io/github/v/release/ethicalhackingplayground/bxss?style=flat-square)](https://github.com/ethicalhackingplayground/bxss/releases/latest)
-[![License](https://img.shields.io/github/license/ethicalhackingplayground/bxss?style=flat-square)](https://github.com/ethicalhackingplayground/bxss/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/ethicalhackingplayground/bxss?style=flat-square)](https://github.com/ethicalhackingplayground/bxss/blob/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ethicalhackingplayground/bxss?style=flat-square)](https://goreportcard.com/report/github.com/ethicalhackingplayground/bxss)
 [![Go Reference](https://pkg.go.dev/badge/github.com/ethicalhackingplayground/bxss.svg)](https://pkg.go.dev/github.com/ethicalhackingplayground/bxss)
 
