@@ -1,5 +1,8 @@
-![alt text](https://www.secjuice.com/content/images/2018/09/blinded-drib.jpg)
-##### Version 1.0
+
+<h1 align="center">
+  <br>
+<img src="https://www.secjuice.com/content/images/2018/09/blinded-drib.jpg" width="200px" alt="Bxss">
+</h1>
 
 # 😎 Bxss 😎
 **A Blind XSS Injector tool**
@@ -21,7 +24,9 @@
 ### Install
 
 
-**`$ go get -u github.com/ethicalhackingplayground/bxss`**
+```
+$ go install github.com/ethicalhackingplayground/bxss@latest
+```
 
 ### Arguments
 ```
