@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-<img src="https://github.com/ethicalhackingplayground/bxss/blob/main/static/blinded-drib.jpg" width="200px" alt="Bxss">
+<img src="https://github.com/ethicalhackingplayground/bxss/blob/master/static/blinded-drib.jpg" width="200px" alt="Bxss">
 </h1>
 <h1 align="center">
 Bxss - Blind XSS Scanner
