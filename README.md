@@ -42,10 +42,15 @@
         Set the concurrency (default 30)
   -header string
         Set the custom header (default "User-Agent")
+ -headerFile string
+    	Path to file containing headers to test
   -parameters
         Test the parameters for blind xss
   -payload string
         the blind XSS payload
+-payloadFile string
+    	Path to file containing payloads to test
+
         
 ```
 
