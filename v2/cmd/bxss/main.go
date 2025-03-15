@@ -36,7 +36,7 @@ func main() {
 	// Create the payload parser
 	payloadParser := payloads.NewPayload(args)
 	if payloadParser == nil {
-		fmt.Printf(colours.ErrorColor, "Error creating payload parser: ", "Something went wrong")
+		fmt.Printf(colours.ErrorColor, "Error creating payload parser: "+"Something went wrong")
 		os.Exit(1)
 	}
 
@@ -45,7 +45,7 @@ func main() {
 		var err error
 		headers, err = payloadParser.ReadLinesFromFile()
 		if err != nil {
-			fmt.Printf(colours.ErrorColor, "Error reading header file: ", err.Error())
+			fmt.Printf(colours.ErrorColor, "Error reading header file: "+err.Error())
 			return
 		}
 	} else if args.Header != "" {
@@ -57,14 +57,14 @@ func main() {
 		var err error
 		payloads, err = payloadParser.ReadLinesFromFile()
 		if err != nil {
-			fmt.Printf(colours.ErrorColor, "Error reading payload file: ", err.Error())
+			fmt.Printf(colours.ErrorColor, "Error reading payload file: "+err.Error())
 			return
 		}
 	} else if args.Payload != "" {
 		payloads = []string{args.Payload}
 	}
 
-	fmt.Printf(colours.NoticeColor, "\n[-] Please Be Patient for bxss\n ", "")
+	fmt.Printf(colours.NoticeColor, "Please Be Patient for bxss"+"")
 
 	// Create a channel to send work items to the worker pool
 	workChan := make(chan string)
@@ -93,7 +93,7 @@ func main() {
 			workChan <- link
 		}
 		if err := scanner.Err(); err != nil {
-			fmt.Printf(colours.ErrorColor, "Error reading input: ", err.Error())
+			fmt.Printf(colours.ErrorColor, "Error reading input: "+err.Error())
 		}
 		close(workChan)
 	}()

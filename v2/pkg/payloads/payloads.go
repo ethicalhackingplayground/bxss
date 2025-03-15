@@ -58,9 +58,17 @@ func (p *PayloadParser) ReadLinesFromFile() ([]string, error) {
 // If there is an error reading the input, that error is printed to standard
 // error. Otherwise, the function prints nothing and returns no value.
 func (p *PayloadParser) ProcessPayloadsAndHeaders(limiter *rate.Limiter, link string, payloads []string, headers []string) {
-	newScanner := scan.NewScanner(limiter, p.args.RateLimit, p.args.FollowRedirects, p.args.AppendMode, p.args.Parameters, p.args.Debug, p.args.ShowTimestamp)
+	config := &scan.ScannerConfig{
+		AppendMode:      p.args.AppendMode,
+		IsParameters:    p.args.Parameters,
+		RateLimit:       p.args.RateLimit,
+		Method:          p.args.Method,
+		FollowRedirects: p.args.FollowRedirects,
+		Debug:           p.args.Debug,
+	}
+	newScanner := scan.NewScanner(limiter, config)
 	link = p.EnsureProtocol(link)
-	fmt.Printf(colours.NoticeColor, "[+] Checking Url Scheme: ", link)
+	fmt.Printf(colours.NoticeColor, "Checking URL Scheme: "+link)
 	fmt.Println("")
 	if len(headers) == 0 {
 		for _, payload := range payloads {

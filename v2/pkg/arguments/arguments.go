@@ -14,21 +14,21 @@ type Arguments struct {
 	HeaderFile      string
 	Payload         string
 	PayloadFile     string
+	Method          string
 	AppendMode      bool
 	Parameters      bool
 	Debug           bool
 	RateLimit       float64
 	FollowRedirects bool
-	ShowTimestamp   bool
 }
 
 // Flag variables
 var (
 	debug           bool
-	showTimestamp   bool
 	concurrency     int
 	payload         string
 	payloadFile     string
+	method          string
 	header          string
 	headerFile      string
 	appendMode      bool
@@ -43,15 +43,15 @@ func (a *Arguments) ValidateArgs() {
 
 	// The banner
 	fmt.Printf(colours.BannerColor, `
-	  ____               
-	 |  _ \              
- 	 | |_) |_  _____ ___ 
-	 |  * <\ \/ / *_/ __|
-	 | |_) |>  <\__ \__ \
-	 |____//_/\_\___/___/
-	                     
-                    
-	`, "-- Coded by @z0idsec -- \n")
+  ____                     
+ | __ )  __  __  ___   ___ 
+ |  _ \  \ \/ / / __| / __|
+ | |_) |  >  <  \__ \ \__ \
+ |____/  /_/\_\ |___/ |___/
+                                        
+	`, "")
+	fmt.Printf(colours.TextColor, "", "v0.0.3")
+	fmt.Printf("\n")
 
 	// Check if at least one header and one payload option is provided
 	if (a.Header == "" && a.HeaderFile == "") && (a.Payload == "" && a.PayloadFile == "") {
@@ -67,17 +67,17 @@ func (a *Arguments) ValidateArgs() {
 func NewArguments() *Arguments {
 
 	// Define the flags
-	flag.IntVar(&concurrency, "concurrency", 30, "Set the concurrency")
-	flag.StringVar(&header, "header", "", "Set a single custom header")
-	flag.StringVar(&headerFile, "headerFile", "", "Path to file containing headers to test")
-	flag.StringVar(&payload, "payload", "", "The blind XSS payload")
-	flag.StringVar(&payloadFile, "payloadFile", "", "Path to file containing payloads to test")
-	flag.BoolVar(&appendMode, "appendMode", false, "Append the payload to the parameter")
-	flag.BoolVar(&parameters, "parameters", false, "Test the parameters for blind xss")
-	flag.BoolVar(&debug, "debug", false, "Enable debug mode to view full request details")
-	flag.Float64Var(&rateLimit, "rl", 0, "Rate limit in requests per second (optional)")
-	flag.BoolVar(&followRedirects, "r", false, "Follow redirects (optional)")
-	flag.BoolVar(&showTimestamp, "ts", false, "Show timestamp for each request (optional)")
+	flag.IntVar(&concurrency, "c", 30, "Set the concurrency level for the scanner")
+	flag.StringVar(&header, "H", "", "Set a single custom header to test for blind XSS")
+	flag.StringVar(&headerFile, "hf", "", "Path to file containing headers to test for blind XSS")
+	flag.StringVar(&payload, "p", "", "The blind XSS payload to test")
+	flag.StringVar(&payloadFile, "pf", "", "Path to file containing payloads to test for blind XSS")
+	flag.BoolVar(&appendMode, "a", false, "Append the payload to the parameter value when testing")
+	flag.BoolVar(&parameters, "t", false, "Test the parameters for blind XSS by appending the payload to the parameter value")
+	flag.StringVar(&method, "X", "", "The HTTP method to use when testing (GET, POST, etc.)")
+	flag.BoolVar(&debug, "v", false, "Enable debug mode to view full request details and debug information")
+	flag.Float64Var(&rateLimit, "rl", 0, "Rate limit in requests per second (optional to prevent abuse)")
+	flag.BoolVar(&followRedirects, "f", false, "Follow redirects when testing (optional)")
 
 	// Parse the arguments
 	flag.Parse()
@@ -88,11 +88,11 @@ func NewArguments() *Arguments {
 		HeaderFile:      headerFile,
 		Payload:         payload,
 		PayloadFile:     payloadFile,
+		Method:          method,
 		AppendMode:      appendMode,
 		Parameters:      parameters,
 		Debug:           debug,
 		RateLimit:       rateLimit,
 		FollowRedirects: followRedirects,
-		ShowTimestamp:   showTimestamp,
 	}
 }

@@ -20,22 +20,26 @@ type ScannerInterface interface {
 	Scan(url string)
 }
 
-type Scanner struct {
+type ScannerConfig struct {
 	AppendMode      bool
 	IsParameters    bool
 	RateLimit       float64
+	Method          string
 	FollowRedirects bool
-	Client          *http.Client
 	Limiter         *rate.Limiter
 	Debug           bool
-	ShowTimestamp   bool
 }
 
-func NewScanner(limiter *rate.Limiter, rateLimit float64, followRedirects bool, appendMode, parameters bool, debug bool, showTimeStamp bool) *Scanner {
+type Scanner struct {
+	Config ScannerConfig
+	Client *http.Client
+}
+
+func NewScanner(limiter *rate.Limiter, config *ScannerConfig) *Scanner {
 	client := &http.Client{
 		Timeout: 3 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if !followRedirects {
+			if !config.FollowRedirects {
 				return http.ErrUseLastResponse
 			}
 			return nil
@@ -43,15 +47,10 @@ func NewScanner(limiter *rate.Limiter, rateLimit float64, followRedirects bool, 
 	}
 
 	return &Scanner{
-		AppendMode:      appendMode,
-		IsParameters:    parameters,
-		RateLimit:       rateLimit,
-		FollowRedirects: followRedirects,
-		Client:          client,
-		Limiter:         limiter,
-		Debug:           debug,
-		ShowTimestamp:   showTimeStamp,
+		Config: *config,
+		Client: client,
 	}
+
 }
 
 // Scan sends HTTP requests with different methods to a specified URL using a given payload and header.
@@ -60,26 +59,30 @@ func NewScanner(limiter *rate.Limiter, rateLimit float64, followRedirects bool, 
 // for each, using the provided payload and header. The function outputs the header and payload details
 // to the console in a colored format.
 func (s *Scanner) Scan(url string, payload string, header string) {
-	fmt.Printf(colours.NoticeColor, "[+] Scanning ", url)
-	fmt.Println("")
-
-	if s.Limiter != nil {
-		s.Limiter.Wait(context.Background())
+	fmt.Println("================================================================================")
+	if s.Config.Limiter != nil {
+		s.Config.Limiter.Wait(context.Background())
 	}
 	time.Sleep(500 * time.Microsecond)
 	fmt.Println("")
 	if header != "" {
-		fmt.Printf(colours.NoticeColor, "[+] Header:  ", header)
+		fmt.Printf(colours.InfoColor, "Using Header: "+header)
 	}
 	if payload != "" {
-		fmt.Printf(colours.TextColor, "[+] Payload: ", payload)
+		fmt.Printf(colours.InfoColor, "Using Payload: "+payload)
+		fmt.Printf("\n")
 	}
-	fmt.Println("")
 
-	methods := []string{"GET", "POST", "OPTIONS", "PUT"}
-	for _, method := range methods {
-		s.MakeRequest(method, payload, url, header, s.AppendMode, s.IsParameters)
+	if s.Config.Method != "" {
+		s.MakeRequest(s.Config.Method, payload, url, header, s.Config.AppendMode, s.Config.IsParameters)
+	} else {
+		methods := []string{"GET", "POST", "OPTIONS", "PUT"}
+		for _, method := range methods {
+			s.MakeRequest(method, payload, url, header, s.Config.AppendMode, s.Config.IsParameters)
+		}
 	}
+
+	fmt.Println("================================================================================")
 }
 
 // setheaders returns a task list that sets the passed headers.
@@ -88,7 +91,6 @@ func (s *Scanner) Setheaders(host string, headers map[string]interface{}, res *s
 		network.Enable(),
 		network.SetExtraHTTPHeaders(network.Headers(headers)),
 		chromedp.Navigate(host),
-		chromedp.Text(`#result`, res, chromedp.ByID, chromedp.NodeVisible),
 	}
 }
 
@@ -100,12 +102,11 @@ func (s *Scanner) Setheaders(host string, headers map[string]interface{}, res *s
 // timestamp is printed. If Debug is true, the request and response are dumped
 // to the console. The function returns no value.
 func (s *Scanner) MakeRequest(method string, payload string, link string, header string, appendMode, isParameters bool) {
-	fmt.Printf(colours.NoticeColor, "\n[*] Making request with ", method)
-	fmt.Println("")
+	fmt.Printf(colours.NoticeColor, "Method: "+method)
 
 	u, err := url.Parse(link)
 	if err != nil {
-		fmt.Printf(colours.ErrorColor, "\nError parsing URL: ", err.Error())
+		fmt.Printf(colours.InfoColor, "Error parsing URL: "+err.Error())
 		return
 	}
 
@@ -113,20 +114,20 @@ func (s *Scanner) MakeRequest(method string, payload string, link string, header
 		qs := u.Query()
 		for param, vv := range qs {
 			if appendMode {
-				fmt.Printf(colours.TextColor, "[*] Parameter:  ", param)
+				fmt.Printf(colours.NoticeColor, "Parameter: "+param)
 				qs.Set(param, vv[0]+payload)
 			} else {
-				fmt.Printf(colours.TextColor, "[*] Parameter:  ", param)
+				fmt.Printf(colours.NoticeColor, "Parameter: "+param)
 				qs.Set(param, payload)
 			}
 		}
 		u.RawQuery = qs.Encode()
 	}
 
-	fmt.Printf(colours.InfoColor, "[-] Testing:  ", u.String())
+	fmt.Printf(colours.NoticeColor, ""+u.String()+"\n")
 	request, err := http.NewRequest(method, u.String(), nil)
 	if err != nil {
-		fmt.Printf(colours.ErrorColor, "\nError creating request: ", err.Error())
+		fmt.Printf(colours.ErrorColor, "Error creating request: "+err.Error())
 		return
 	}
 
@@ -137,7 +138,6 @@ func (s *Scanner) MakeRequest(method string, payload string, link string, header
 
 	// Check if the header is empty
 	if header != "" {
-
 		// Remove existing headers that we're testing
 		request.Header.Del("User-Agent")
 		request.Header.Del("X-Forwarded-Host")
@@ -148,32 +148,36 @@ func (s *Scanner) MakeRequest(method string, payload string, link string, header
 		if len(headerParts) == 2 {
 			headerName := strings.TrimSpace(headerParts[0])
 			headerValue := strings.TrimSpace(headerParts[1])
-
 			// Special handling for User-Agent header
 			if strings.ToLower(headerName) == "user-agent" {
-				request.Header.Set("User-Agent", headerValue+payload)
+				// If appendMode is true, append the payload to the existing value
+				if appendMode {
+					request.Header.Set("User-Agent", headerValue+payload)
+				} else {
+					request.Header.Set("User-Agent", payload)
+				}
 			} else {
-				request.Header.Set(headerName, headerValue+payload)
+				// If appendMode is true, append the payload to the existing value
+				if appendMode {
+					request.Header.Set(headerName, headerValue+payload)
+				} else {
+					request.Header.Set(headerName, payload)
+				}
 			}
 		} else {
 			// If no value is provided, use the payload as the value
 			request.Header.Set(header, payload)
 		}
 
-		if s.ShowTimestamp {
-			fmt.Printf(colours.InfoColor, "\n[*] Timestamp: ", time.Now().Format(time.RFC3339))
-		}
-
-		if s.Debug {
-			s.DebugRequest(request)
-		}
-
 		// Get the headers from the request
 		headers := make(map[string]interface{})
 		for key := range request.Header {
 			header := request.Header.Get(key)
-			fmt.Printf(colours.DebugColor, "-> Header: \n", key)
-			fmt.Printf(colours.DebugColor, "-> Value: \n", header)
+			if s.Config.Debug {
+				fmt.Printf(colours.DebugColor, "Header: "+key)
+				fmt.Printf(colours.DebugColor, "Value: "+header)
+			}
+
 			headers[key] = header
 		}
 
@@ -185,14 +189,14 @@ func (s *Scanner) MakeRequest(method string, payload string, link string, header
 			&res,
 		))
 		if err != nil {
-			fmt.Printf(colours.ErrorColor, "\nError making request: ", err.Error())
+			fmt.Printf(colours.ErrorColor, "Error making request: "+err.Error())
 			return
 		}
 
 	} else {
 		err = chromedp.Run(ctx, chromedp.Navigate(u.String()))
 		if err != nil {
-			fmt.Printf(colours.ErrorColor, "\nError making request: ", err.Error())
+			fmt.Printf(colours.ErrorColor, "Error making request: "+err.Error())
 			return
 		}
 	}
@@ -200,12 +204,13 @@ func (s *Scanner) MakeRequest(method string, payload string, link string, header
 	// Get the response from the request
 	response, err := s.Client.Do(request)
 	if err != nil {
-		fmt.Printf(colours.ErrorColor, "\nError making request: ", err.Error())
+		fmt.Printf(colours.ErrorColor, "Error making request: "+err.Error())
 		return
 	}
 	defer response.Body.Close()
 
-	if s.Debug {
+	if s.Config.Debug {
+		s.DebugRequest(request)
 		s.DebugResponse(response)
 	}
 
@@ -216,9 +221,9 @@ func (s *Scanner) MakeRequest(method string, payload string, link string, header
 func (s *Scanner) DebugRequest(req *http.Request) {
 	dump, err := httputil.DumpRequestOut(req, true)
 	if err != nil {
-		fmt.Printf(colours.ErrorColor, "\nError dumping request: ", err.Error())
+		fmt.Printf(colours.ErrorColor, "Error dumping request: "+err.Error())
 	} else {
-		fmt.Printf(colours.DebugColor, "\n--- Request ---\n", string(dump))
+		fmt.Printf("%s", "\n--- Request ---\n"+string(dump))
 	}
 }
 
@@ -227,15 +232,15 @@ func (s *Scanner) DebugRequest(req *http.Request) {
 func (s *Scanner) DebugResponse(resp *http.Response) {
 	dump, err := httputil.DumpResponse(resp, true)
 	if err != nil {
-		fmt.Printf(colours.ErrorColor, "\nError dumping response: ", err.Error())
+		fmt.Printf(colours.ErrorColor, "Error dumping response: "+err.Error())
 	} else {
-		fmt.Printf(colours.DebugColor, "\n--- Response ---\n", string(dump))
+		fmt.Println(string(dump))
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf(colours.ErrorColor, "Error reading response body: ", err.Error())
+		fmt.Printf(colours.ErrorColor, "Error reading response body: "+err.Error())
 	} else {
-		fmt.Printf(colours.DebugColor, "\n--- Response Body ---\n", string(body))
+		fmt.Println(string(body))
 	}
 }
