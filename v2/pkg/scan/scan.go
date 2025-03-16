@@ -81,7 +81,16 @@ func (s *Scanner) Scan(url string, payload string, header string) {
 	}
 
 	if s.Config.Method != "" {
-		s.MakeRequest(s.Config.Method, payload, url, header, s.Config.AppendMode, s.Config.IsParameters)
+		// Split the list of methods seperated with a comma if the comma exists
+		// Otherwise just use the method passed
+		if strings.Contains(s.Config.Method, ",") {
+			methods := strings.Split(s.Config.Method, ",")
+			for _, method := range methods {
+				s.MakeRequest(method, payload, url, header, s.Config.AppendMode, s.Config.IsParameters)
+			}
+		} else {
+			s.MakeRequest(s.Config.Method, payload, url, header, s.Config.AppendMode, s.Config.IsParameters)
+		}
 	} else {
 		methods := []string{"GET", "POST", "OPTIONS", "PUT"}
 		for _, method := range methods {
