@@ -20,6 +20,7 @@ type Arguments struct {
 	Debug           bool
 	RateLimit       float64
 	FollowRedirects bool
+	Trace           bool
 }
 
 // Flag variables
@@ -35,6 +36,7 @@ var (
 	parameters      bool
 	rateLimit       float64
 	followRedirects bool
+	trace           bool
 )
 
 // ValidateArgs validates the arguments passed to the program and prints the
@@ -78,6 +80,7 @@ func NewArguments() *Arguments {
 	flag.BoolVar(&debug, "v", false, "Enable debug mode to view full request details and debug information")
 	flag.Float64Var(&rateLimit, "rl", 0, "Rate limit in requests per second (optional to prevent abuse)")
 	flag.BoolVar(&followRedirects, "f", false, "Follow redirects when testing (optional)")
+	flag.BoolVar(&trace, "l", false, "Enable trace mode to track which host is vulnerable to XSS, if your canary server support custom parameters, insert url={LINK}")
 
 	// Parse the arguments
 	flag.Parse()
@@ -94,5 +97,6 @@ func NewArguments() *Arguments {
 		Debug:           debug,
 		RateLimit:       rateLimit,
 		FollowRedirects: followRedirects,
+		Trace:           trace,
 	}
 }

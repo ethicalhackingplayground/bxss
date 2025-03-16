@@ -28,6 +28,7 @@ type ScannerConfig struct {
 	FollowRedirects bool
 	Limiter         *rate.Limiter
 	Debug           bool
+	Trace           bool
 }
 
 type Scanner struct {
@@ -65,10 +66,16 @@ func (s *Scanner) Scan(url string, payload string, header string) {
 	}
 	time.Sleep(500 * time.Microsecond)
 	fmt.Println("")
+
 	if header != "" {
 		fmt.Printf(colours.InfoColor, "Using Header: "+header)
 	}
-	if payload != "" {
+	if s.Config.Trace {
+		payload = strings.Replace(payload, "{LINK}", url, 1)
+		fmt.Printf(colours.InfoColor, "**Using Trace Mode**"+"")
+		fmt.Printf(colours.InfoColor, "New Payload:"+payload)
+		fmt.Printf("\n")
+	} else {
 		fmt.Printf(colours.InfoColor, "Using Payload: "+payload)
 		fmt.Printf("\n")
 	}
@@ -120,6 +127,7 @@ func (s *Scanner) MakeRequest(method string, payload string, link string, header
 				fmt.Printf(colours.NoticeColor, "Parameter: "+param)
 				qs.Set(param, payload)
 			}
+
 		}
 		u.RawQuery = qs.Encode()
 	}

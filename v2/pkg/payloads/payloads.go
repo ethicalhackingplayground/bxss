@@ -65,6 +65,7 @@ func (p *PayloadParser) ProcessPayloadsAndHeaders(limiter *rate.Limiter, link st
 		Method:          p.args.Method,
 		FollowRedirects: p.args.FollowRedirects,
 		Debug:           p.args.Debug,
+		Trace:           p.args.Trace,
 	}
 	newScanner := scan.NewScanner(limiter, config)
 	link = p.EnsureProtocol(link)
