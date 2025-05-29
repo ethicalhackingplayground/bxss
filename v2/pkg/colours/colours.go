@@ -9,4 +9,5 @@ const (
 	WarningColor = "\033[1;37m[\033[1;34mNOTICE\033[1;37m]\033[0m %s\n"
 	ErrorColor   = "\033[1;37m[\033[1;31mERROR\033[1;37m]\033[0m %s\n"
 	DebugColor   = "\033[1;37m[\033[0;36mDEBUG\033[1;37m]\033[0m %s\n"
+	SuccessColor = "\033[1;37m[\033[1;32mSUCCESS\033[1;37m]\033[0m %s\n"
 )

@@ -2,11 +2,13 @@ package payloads
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/ethicalhackingplayground/bxss/v2/pkg/arguments"
+	"github.com/ethicalhackingplayground/bxss/v2/pkg/browser"
 	"github.com/ethicalhackingplayground/bxss/v2/pkg/colours"
 	"github.com/ethicalhackingplayground/bxss/v2/pkg/scan"
 	"golang.org/x/time/rate"
@@ -66,6 +68,10 @@ func (p *PayloadParser) ProcessPayloadsAndHeaders(limiter *rate.Limiter, link st
 		FollowRedirects: p.args.FollowRedirects,
 		Debug:           p.args.Debug,
 		Trace:           p.args.Trace,
+		BrowserType:     p.args.BrowserType,
+		BrowserPath:     p.args.BrowserPath,
+		WorkerPool:      p.args.WorkerPool,
+		RequestFile:     p.args.RequestFile,
 	}
 	newScanner := scan.NewScanner(limiter, config)
 	link = p.EnsureProtocol(link)
@@ -95,4 +101,55 @@ func (p *PayloadParser) EnsureProtocol(link string) string {
 		return "https://" + link
 	}
 	return link
+}
+
+// RequestParser is a wrapper around browser.RequestParser for handling custom requests
+type RequestParser struct {
+	args     *arguments.Arguments
+	filePath string
+}
+
+// NewRequestParser creates a new request parser for custom requests
+func NewRequestParser(filePath string) *RequestParser {
+	return &RequestParser{
+		args:     nil, // Not needed for direct file processing
+		filePath: filePath,
+	}
+}
+
+// ProcessCustomRequests processes custom requests from a file
+func (p *RequestParser) ProcessCustomRequests(limiter *rate.Limiter, payloads []string) error {
+	// Create the browser request parser
+	parser := browser.NewRequestParser(p.filePath)
+
+	// Create browser context for executing requests
+	browserType := "chrome" // Default fallback
+	if p.args != nil && p.args.BrowserType != "" {
+		browserType = p.args.BrowserType
+	}
+	b := browser.NewBrowser(browserType, "")
+	ctx, cancel, err := b.CreateContext(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to create browser context: %w", err)
+	}
+	defer cancel()
+
+	// Execute the requests
+	fmt.Printf(colours.InfoColor, "Processing custom requests from file...")
+	responses, err := parser.ExecuteRequests(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Report on the responses
+	fmt.Printf(colours.InfoColor, fmt.Sprintf("Processed %d custom requests successfully", len(responses)))
+
+	// Clean up responses
+	for _, resp := range responses {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+	}
+
+	return nil
 }

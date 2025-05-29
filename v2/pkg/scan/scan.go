@@ -8,10 +8,12 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
+	"github.com/ethicalhackingplayground/bxss/v2/pkg/browser"
 	"github.com/ethicalhackingplayground/bxss/v2/pkg/colours"
 	"golang.org/x/time/rate"
 )
@@ -29,11 +31,17 @@ type ScannerConfig struct {
 	Limiter         *rate.Limiter
 	Debug           bool
 	Trace           bool
+	BrowserType     string
+	BrowserPath     string
+	WorkerPool      int
+	RequestFile     string
 }
 
 type Scanner struct {
-	Config ScannerConfig
-	Client *http.Client
+	Config      ScannerConfig
+	Client      *http.Client
+	browserPool *browser.BrowserPool
+	mu          sync.Mutex
 }
 
 func NewScanner(limiter *rate.Limiter, config *ScannerConfig) *Scanner {
@@ -47,11 +55,36 @@ func NewScanner(limiter *rate.Limiter, config *ScannerConfig) *Scanner {
 		},
 	}
 
-	return &Scanner{
-		Config: *config,
-		Client: client,
+	// Default to Chrome if no browser type specified
+	browserType := config.BrowserType
+	if browserType == "" {
+		browserType = "chrome"
 	}
 
+	// Create browser instance
+	b := browser.NewBrowser(browserType, config.BrowserPath)
+
+	// Create a browser pool with the specified number of workers
+	workerCount := config.WorkerPool
+	if workerCount <= 0 {
+		workerCount = 2 // Default to 2 workers if not specified
+	}
+
+	browserPool := browser.NewBrowserPool(b, workerCount)
+
+	// Initialize the browser pool in the background
+	go func() {
+		err := browserPool.Initialize()
+		if err != nil {
+			fmt.Printf(colours.WarningColor, fmt.Sprintf("Warning: Browser pool initialization failed, will use one-time contexts: %v\n", err))
+		}
+	}()
+
+	return &Scanner{
+		Config:      *config,
+		Client:      client,
+		browserPool: browserPool,
+	}
 }
 
 // Scan sends HTTP requests with different methods to a specified URL using a given payload and header.
@@ -148,10 +181,13 @@ func (s *Scanner) MakeRequest(method string, payload string, link string, header
 		return
 	}
 
-	// Use chromedp to navigate to the link and modify the request
-	// based on the payload and header
-	ctx, cancel := chromedp.NewContext(context.Background())
-	defer cancel()
+	// Get a browser context from the pool instead of creating a new one each time
+	ctx, err := s.getBrowserContext()
+	if err != nil {
+		fmt.Printf(colours.ErrorColor, "Error getting browser context: "+err.Error())
+		return
+	}
+	defer s.releaseBrowserContext(ctx)
 
 	// Check if the header is empty
 	if header != "" {
@@ -259,5 +295,50 @@ func (s *Scanner) DebugResponse(resp *http.Response) {
 		fmt.Printf(colours.ErrorColor, "Error reading response body: "+err.Error())
 	} else {
 		fmt.Println(string(body))
+	}
+}
+
+// getBrowserContext gets a browser context from the pool
+func (s *Scanner) getBrowserContext() (context.Context, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.browserPool == nil {
+		// Create a one-time context if no pool is available
+		fmt.Printf(colours.WarningColor, "Browser pool not available, creating one-time context\n")
+		ctx, _ := chromedp.NewContext(context.Background())
+		return ctx, nil
+	}
+
+	// Get context from the pool
+	ctx, err := s.browserPool.GetContext()
+	if err != nil {
+		// Fall back to creating a new context if the pool fails
+		fmt.Printf(colours.WarningColor, fmt.Sprintf("Failed to get context from pool: %v, creating one-time context\n", err))
+		oneTimeCtx, _ := chromedp.NewContext(context.Background())
+		return oneTimeCtx, nil
+	}
+
+	return ctx, nil
+}
+
+// releaseBrowserContext returns a browser context to the pool
+func (s *Scanner) releaseBrowserContext(ctx context.Context) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.browserPool != nil {
+		s.browserPool.ReleaseContext(ctx)
+	}
+}
+
+// Close cleans up resources used by the scanner
+func (s *Scanner) Close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.browserPool != nil {
+		s.browserPool.Close()
+		s.browserPool = nil
 	}
 }

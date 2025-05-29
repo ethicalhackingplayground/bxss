@@ -32,12 +32,39 @@ func main() {
 	if args.RateLimit > 0 {
 		limiter = rate.NewLimiter(rate.Limit(args.RateLimit), 1)
 	}
-
 	// Create the payload parser
 	payloadParser := payloads.NewPayload(args)
 	if payloadParser == nil {
 		fmt.Printf(colours.ErrorColor, "Error creating payload parser: "+"Something went wrong")
 		os.Exit(1)
+	}
+
+	// Handle custom request file if specified
+	if args.RequestFile != "" {
+		fmt.Printf(colours.InfoColor, "Using custom request file: "+args.RequestFile)
+
+		// Create request parser from the payloads package
+		requestParser := payloads.NewRequestParser(args.RequestFile)
+		if requestParser == nil {
+			fmt.Printf(colours.ErrorColor, "Error creating request parser for file: "+args.RequestFile)
+			os.Exit(1)
+		}
+
+		// Process the custom requests
+		var payloadList []string
+		if args.Payload != "" {
+			payloadList = []string{args.Payload}
+		}
+
+		err := requestParser.ProcessCustomRequests(limiter, payloadList)
+		if err != nil {
+			fmt.Printf(colours.ErrorColor, "Error processing custom requests: "+err.Error())
+			os.Exit(1)
+		}
+
+		// Exit after processing custom requests
+		fmt.Printf(colours.SuccessColor, "Custom requests processed successfully.")
+		os.Exit(0)
 	}
 
 	var headers []string
@@ -99,4 +126,8 @@ func main() {
 	}()
 
 	wg.Wait()
+
+	// Log completion message
+	fmt.Printf(colours.SuccessColor, "Scan completed successfully.")
+	fmt.Println("")
 }

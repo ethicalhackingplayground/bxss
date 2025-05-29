@@ -21,6 +21,10 @@ type Arguments struct {
 	RateLimit       float64
 	FollowRedirects bool
 	Trace           bool
+	BrowserType     string
+	BrowserPath     string
+	WorkerPool      int
+	RequestFile     string
 }
 
 // Flag variables
@@ -37,6 +41,10 @@ var (
 	rateLimit       float64
 	followRedirects bool
 	trace           bool
+	browserType     string
+	browserPath     string
+	workerPool      int
+	requestFile     string
 )
 
 // ValidateArgs validates the arguments passed to the program and prints the
@@ -81,6 +89,10 @@ func NewArguments() *Arguments {
 	flag.Float64Var(&rateLimit, "rl", 0, "Rate limit in requests per second (optional to prevent abuse)")
 	flag.BoolVar(&followRedirects, "f", false, "Follow redirects when testing (optional)")
 	flag.BoolVar(&trace, "l", false, "Enable trace mode to track which host is vulnerable to XSS, if your canary server support custom parameters, insert url={LINK}")
+	flag.StringVar(&browserType, "browser", "chrome", "Browser to use for testing (chrome, firefox, chromium)")
+	flag.StringVar(&browserPath, "browser-path", "", "Custom path to browser executable")
+	flag.IntVar(&workerPool, "workers", 2, "Number of browser worker instances to use")
+	flag.StringVar(&requestFile, "request", "", "Path to file containing custom HTTP requests to import")
 
 	// Parse the arguments
 	flag.Parse()
@@ -98,5 +110,9 @@ func NewArguments() *Arguments {
 		RateLimit:       rateLimit,
 		FollowRedirects: followRedirects,
 		Trace:           trace,
+		BrowserType:     browserType,
+		BrowserPath:     browserPath,
+		WorkerPool:      workerPool,
+		RequestFile:     requestFile,
 	}
 }
